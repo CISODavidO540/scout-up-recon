@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>recon — console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+
+:root{
+  --bg:#EEF0F3; --surface:#FFFFFF; --surface-2:#E4E8ED; --inset:#F6F7F9;
+  --ink:#141920; --muted:#5A6675; --line:#D3D9E0;
+  --accent:#A85418; --accent-soft:#F5E3D6;
+  --ok:#1F7A5E; --ok-soft:#D9EDE6;
+  --warn:#8A6613; --warn-soft:#F5EACC;
+  --danger:#B03434; --danger-soft:#F7DEDE;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B0E13; --surface:#141A22; --surface-2:#1C232D; --inset:#0F141B;
+  --ink:#DDE3EB; --muted:#8593A4; --line:#232C38;
+  --accent:#E08A45; --accent-soft:#33230F;
+  --ok:#4EB491; --ok-soft:#0F2C24;
+  --warn:#D6AB4A; --warn-soft:#2E2611;
+  --danger:#E36A6A; --danger-soft:#341717;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B0E13; --surface:#141A22; --surface-2:#1C232D; --inset:#0F141B;
+  --ink:#DDE3EB; --muted:#8593A4; --line:#232C38;
+  --accent:#E08A45; --accent-soft:#33230F;
+  --ok:#4EB491; --ok-soft:#0F2C24;
+  --warn:#D6AB4A; --warn-soft:#2E2611;
+  --danger:#E36A6A; --danger-soft:#341717;
+  color-scheme:dark;
+}
+
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Barlow,system-ui,-apple-system,sans-serif;
+  font-size:14.5px; line-height:1.5;
+}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
+
+/* top bar */
+header.top{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:10px 20px;border-bottom:1px solid var(--line);
+  background:var(--surface);position:sticky;top:0;z-index:20;
+}
+.brand{
+  font-family:"Barlow Condensed",sans-serif;font-weight:700;
+  font-size:23px;letter-spacing:.05em;text-transform:uppercase;line-height:1;
+}
+.brand span{color:var(--accent)}
+.ver{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.top .grow{flex:1}
+
+/* scope banner — the authorization is the most important thing on screen */
+.scope{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;
+  padding:11px 20px;border-bottom:1px solid var(--line);
+  background:var(--surface-2);
+}
+.scope .field{display:flex;flex-direction:column;gap:1px;min-width:0}
+.scope dt{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.scope dd{margin:0;font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38ch}
+.state{
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:3px;
+}
+.state.open{background:var(--ok-soft);color:var(--ok)}
+.state.closed{background:var(--danger-soft);color:var(--danger)}
+.state.err{background:var(--danger-soft);color:var(--danger)}
+
+main{display:grid;grid-template-columns:1fr;gap:0}
+@media (min-width:1000px){main{grid-template-columns:296px minmax(0,1fr)}}
+
+/* left rail */
+aside{
+  border-right:1px solid var(--line);background:var(--surface);
+  padding:18px 20px;display:flex;flex-direction:column;gap:20px;
+}
+@media (min-width:1000px){aside{height:calc(100vh - 96px);overflow-y:auto;position:sticky;top:96px}}
+h2.lbl{
+  font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line);
+}
+label.f{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+input[type=text]{
+  width:100%;font:inherit;font-size:14px;padding:8px 10px;
+  background:var(--inset);color:var(--ink);border:1px solid var(--line);border-radius:4px;
+  font-family:"JetBrains Mono",monospace;
+}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.mods{display:flex;flex-direction:column;gap:5px}
+.mod{
+  display:flex;gap:9px;align-items:flex-start;padding:7px 9px;
+  border:1px solid var(--line);border-radius:4px;cursor:pointer;background:var(--inset);
+}
+.mod:hover{border-color:var(--accent)}
+.mod input{margin:3px 0 0;accent-color:var(--accent);flex:none}
+.mod b{display:block;font-size:13px;font-weight:600}
+.mod small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+button{font:inherit;cursor:pointer;border-radius:4px;border:1px solid transparent;transition:filter .12s,background .12s}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.run{
+  width:100%;background:var(--accent);color:#fff;border-color:var(--accent);
+  padding:10px;font-weight:600;font-size:14.5px;letter-spacing:.02em;
+}
+.run:hover{filter:brightness(1.1)}
+.run[disabled]{background:var(--surface-2);color:var(--muted);border-color:var(--line);cursor:default;filter:none}
+.hint{font-size:11.5px;color:var(--muted);margin:7px 0 0;line-height:1.4}
+
+/* results */
+section.out{padding:18px 20px 60px;min-width:0}
+.status{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 13px;border:1px solid var(--line);border-left:3px solid var(--muted);
+  border-radius:4px;background:var(--surface);margin-bottom:16px;font-size:13.5px;
+}
+.status.running{border-left-color:var(--warn)}
+.status.done{border-left-color:var(--ok)}
+.status.refused,.status.error{border-left-color:var(--danger);background:var(--danger-soft)}
+.spin{
+  width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .7s linear infinite;flex:none;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}*{transition:none!important}}
+
+.panel{border:1px solid var(--line);border-radius:5px;background:var(--surface);margin-bottom:14px;overflow:hidden}
+.panel > h3{
+  margin:0;padding:9px 13px;background:var(--surface-2);border-bottom:1px solid var(--line);
+  font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.panel > h3 em{font-style:normal;font-weight:400;font-size:11.5px;letter-spacing:.04em;text-transform:none;color:var(--muted)}
+.panel .body{padding:11px 13px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{
+  text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;padding:0 12px 5px 0;white-space:nowrap;
+}
+td{padding:4px 12px 4px 0;vertical-align:top;border-top:1px solid var(--line)}
+td.k{color:var(--muted);white-space:nowrap;width:1%}
+.pill{
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;
+  padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap;
+}
+.pill.open{background:var(--ok-soft);color:var(--ok)}
+.pill.miss{background:var(--warn-soft);color:var(--warn)}
+.pill.leak{background:var(--danger-soft);color:var(--danger)}
+.banner{
+  font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);
+  background:var(--inset);padding:4px 7px;border-radius:3px;
+  white-space:pre-wrap;word-break:break-all;margin-top:3px;
+}
+.none{color:var(--muted);font-size:13px;padding:2px 0}
+
+.hist{display:flex;flex-direction:column;gap:3px}
+.hist a{
+  display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+  padding:5px 7px;border-radius:3px;text-decoration:none;color:inherit;
+  font-size:12.5px;border:1px solid transparent;
+}
+.hist a:hover{background:var(--inset);border-color:var(--line)}
+.hist .t{font-family:"JetBrains Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .m{color:var(--muted);font-size:10.5px;white-space:nowrap}
+
+.report{
+  margin-left:auto;background:transparent;color:var(--accent);
+  border:1px solid var(--accent);padding:4px 11px;font-size:12.5px;font-weight:600;
+}
+.report:hover{background:var(--accent);color:#fff}
+.report[disabled]{opacity:.45;cursor:default;background:transparent;color:var(--muted);border-color:var(--line)}
+.viewer{
+  font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.55;
+  background:var(--surface);border:1px solid var(--line);border-radius:5px;
+  padding:14px 16px;white-space:pre-wrap;word-break:break-word;
+  max-height:70vh;overflow-y:auto;margin:0 0 14px;
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">re<span>con</span></div>
+  <div class="ver mono" id="ver">console</div>
+  <div class="grow"></div>
+  <div class="ver">loopback only · 127.0.0.1</div>
+</header>
+
+<dl class="scope" id="scope"><div class="field"><dt>scope</dt><dd>loading…</dd></div></dl>
+
+<main>
+  <aside>
+    <div>
+      <h2 class="lbl">Target</h2>
+      <label class="f" for="target">domain or ip</label>
+      <input type="text" id="target" placeholder="127.0.0.1" autocomplete="off" spellcheck="false">
+      <p class="hint">Checked against the scope file before any packet is sent. There is no override.</p>
+    </div>
+
+    <div>
+      <h2 class="lbl">Modules</h2>
+      <div class="mods" id="mods"></div>
+    </div>
+
+    <div>
+      <h2 class="lbl">Ports</h2>
+      <input type="text" id="ports" value="top" autocomplete="off" spellcheck="false">
+      <p class="hint"><code>top</code>, <code>1-1024</code>, or <code>22,80,443</code></p>
+    </div>
+
+    <button class="run" id="run">Run scan</button>
+
+    <div>
+      <h2 class="lbl">Recent scans</h2>
+      <div class="hist" id="hist"><div class="none">none yet</div></div>
+    </div>
+
+    <div>
+      <h2 class="lbl">Reports</h2>
+      <div class="hist" id="reports"><div class="none">none written yet</div></div>
+    </div>
+  </aside>
+
+  <section class="out">
+    <div class="status" id="status">Idle. Pick a target and modules, then run a scan.</div>
+    <div id="results"></div>
+    <pre class="viewer" id="viewer" hidden></pre>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (t,c,txt) => { const n=document.createElement(t); if(c)n.className=c; if(txt!=null)n.textContent=txt; return n; };
+const esc = s => String(s==null?"":s);
+let poll = null;
+
+async function j(url, opts){ const r = await fetch(url, opts); return r.json(); }
+
+/* ---------- scope banner ---------- */
+async function loadScope(){
+  const s = await j('/api/scope');
+  const box = $('#scope'); box.innerHTML = '';
+  if(s.error){
+    box.append(pill('err','no scope'), field('problem', s.error.split('\n')[0]));
+    $('#run').disabled = true;
+    return;
+  }
+  box.append(
+    pill(s.window_open ? 'open' : 'closed', s.window_open ? 'authorized' : 'window closed'),
+    field('engagement', s.engagement),
+    field('authorized by', s.authorized_by),
+    field('window', s.valid_from + ' → ' + s.valid_until),
+    field('in scope', s.in_scope.join(', ')),
+  );
+  if(s.out_of_scope.length) box.append(field('excluded', s.out_of_scope.join(', ')));
+  $('#run').disabled = !s.window_open;
+}
+function pill(kind, text){ const p = el('span','state '+kind, text); return p; }
+function field(k,v){
+  const d = el('div','field'); d.append(el('dt',null,k), el('dd',null,v)); 
+  d.querySelector('dd').title = v; return d;
+}
+
+/* ---------- modules ---------- */
+async function loadModules(){
+  const mods = await j('/api/modules');
+  const box = $('#mods');
+  mods.forEach((m,i) => {
+    const lab = el('label','mod');
+    const cb = el('input'); cb.type='checkbox'; cb.value=m.name;
+    cb.checked = ['dns','http'].includes(m.name);
+    const wrap = el('div');
+    wrap.append(el('b',null,m.name), el('small',null,m.description));
+    lab.append(cb, wrap); box.append(lab);
+  });
+}
+
+/* ---------- history ---------- */
+async function loadHistory(){
+  const h = await j('/api/history');
+  const box = $('#hist'); box.innerHTML='';
+  if(!h.length){ box.append(el('div','none','none yet')); return; }
+  h.slice(0,12).forEach(r => {
+    const a = el('a'); a.href='#'; a.onclick = e => { e.preventDefault(); show(r.id); };
+    a.append(el('span','t',r.target), el('span','m',(r.finished||'').slice(11,16)));
+    box.append(a);
+  });
+}
+
+/* ---------- run ---------- */
+$('#run').onclick = async () => {
+  const target = $('#target').value.trim();
+  if(!target){ $('#target').focus(); return; }
+  const modules = [...document.querySelectorAll('#mods input:checked')].map(c=>c.value);
+  if(!modules.length){ setStatus('error','Select at least one module.'); return; }
+
+  $('#run').disabled = true;
+  setStatus('running', 'Starting…', true);
+  $('#results').innerHTML = '';
+
+  $('#viewer').hidden = true;
+  const res = await j('/api/scan', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({target, modules, ports: $('#ports').value.trim() || 'top'})
+  });
+  if(res.error){ setStatus('error', res.error); $('#run').disabled=false; return; }
+  currentJob = res.id;
+  watch(res.id);
+};
+
+function watch(id){
+  clearInterval(poll);
+  poll = setInterval(async () => {
+    const jb = await j('/api/job/'+id);
+    render(jb);
+    if(jb.state !== 'running'){
+      clearInterval(poll); $('#run').disabled = false; loadHistory();
+    }
+  }, 700);
+}
+async function show(id){ currentJob = id; const jb = await j('/api/job/'+id); jb.id = jb.id || id; render(jb); }
+
+let currentJob = null;
+
+function setStatus(kind, text, spinning, jobId){
+  const s = $('#status'); s.className = 'status '+kind; s.innerHTML='';
+  if(spinning) s.append(el('div','spin'));
+  s.append(el('span',null,text));
+  if(jobId){
+    const b = el('button','report','Write report');
+    b.onclick = () => writeReport(jobId, b);
+    s.append(b);
+  }
+}
+
+async function writeReport(id, btn){
+  btn.disabled = true; btn.textContent = 'Writing…';
+  const r = await j('/api/report/'+id, {method:'POST'});
+  if(r.error){ btn.disabled = false; btn.textContent = 'Write report'; alert(r.error); return; }
+  btn.textContent = `Saved (${r.findings} findings)`;
+  loadReports();
+  viewReport(r.file);
+}
+
+async function viewReport(file){
+  const res = await fetch('/api/report/'+encodeURIComponent(file));
+  const v = $('#viewer');
+  v.textContent = await res.text();
+  v.hidden = false;
+  v.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function loadReports(){
+  const rs = await j('/api/reports');
+  const box = $('#reports'); box.innerHTML='';
+  if(!rs.length){ box.append(el('div','none','none written yet')); return; }
+  rs.slice(0,10).forEach(r => {
+    const a = el('a'); a.href='#'; a.onclick = e => { e.preventDefault(); viewReport(r.file); };
+    a.append(el('span','t', r.file.replace(/\.md$/,'')), el('span','m', (r.bytes/1024).toFixed(1)+'k'));
+    box.append(a);
+  });
+}
+
+function render(jb){
+  if(jb.state === 'running')  setStatus('running', `Scanning ${jb.target} — ${jb.running}…`, true);
+  if(jb.state === 'done')     setStatus('done', `${jb.target} — finished ${jb.finished||''}`, false, jb.id || currentJob);
+  if(jb.state === 'refused')  setStatus('refused', 'REFUSED: ' + jb.error);
+  if(jb.state === 'error')    setStatus('error', jb.error);
+
+  const out = $('#results'); out.innerHTML = '';
+  const r = jb.results || {};
+  if(r.dns) out.append(panelDNS(r.dns));
+  if(r.whois) out.append(panelWhois(r.whois));
+  if(r.subdomains) out.append(panelSubs(r.subdomains));
+  if(r.ports) out.append(panelPorts(r.ports));
+  if(r.http) out.append(panelHTTP(r.http));
+  for(const [name, err] of Object.entries(jb.failed || {})){
+    const p = mkPanel(name + ' — failed'); p.body.append(el('div','none', err)); out.append(p.el);
+  }
+}
+
+function mkPanel(title, note){
+  const p = el('div','panel');
+  const h = el('h3'); h.append(el('span',null,title)); if(note) h.append(el('em',null,note));
+  const body = el('div','body');
+  p.append(h, body); return {el:p, body};
+}
+function kvTable(rows){
+  const t = el('table');
+  rows.forEach(([k,v]) => {
+    const tr = el('tr'); tr.append(el('td','k mono',k));
+    const td = el('td'); if(v instanceof Node) td.append(v); else td.append(el('span','mono',esc(v)));
+    tr.append(td); t.append(tr);
+  });
+  return t;
+}
+
+function panelDNS(d){
+  const p = mkPanel('dns', 'via ' + d.backend);
+  const rows = [];
+  for(const [rt, vals] of Object.entries(d.records || {})) rows.push([rt, vals.join('\n')]);
+  for(const [a, n] of Object.entries(d.reverse || {})) rows.push(['PTR', a + ' → ' + n]);
+  p.body.append(rows.length ? kvTable(rows) : el('div','none','no records returned'));
+  return p.el;
+}
+function panelWhois(d){
+  const p = mkPanel('whois');
+  if(!d.available){ p.body.append(el('div','none', d.note || 'unavailable')); return p.el; }
+  const rows = Object.entries(d.summary || {}).map(([k,v]) => [k, Array.isArray(v)? v.join('\n') : v]);
+  p.body.append(rows.length ? kvTable(rows) : el('div','none','no fields parsed'));
+  return p.el;
+}
+function panelSubs(d){
+  const found = d.found || [];
+  const p = mkPanel('subdomains', `${found.length} of ${d.words_tried} candidates`);
+  if(d.wildcard_detected) p.body.append(el('div','none','wildcard DNS detected — results filtered against it'));
+  p.body.append(found.length
+    ? kvTable(found.map(f => [f.name, f.addresses.join(', ')]))
+    : el('div','none','none found'));
+  (d.skipped_out_of_scope||[]).forEach(s =>
+    p.body.append(el('div','none','out of scope, not probed: ' + s.name)));
+  return p.el;
+}
+function panelPorts(d){
+  const p = mkPanel('ports', `${d.open.length} open of ${d.ports_scanned} scanned · ${d.scanned_host}`);
+  if(d.error){ p.body.append(el('div','none', d.error)); return p.el; }
+  if(!d.open.length){ p.body.append(el('div','none','no open ports')); return p.el; }
+  const t = el('table');
+  const head = el('tr'); ['port','service','rtt','detail'].forEach(h => head.append(el('th',null,h)));
+  t.append(head);
+  d.open.forEach(o => {
+    const tr = el('tr');
+    const c1 = el('td'); c1.append(el('span','pill open', o.port + '/tcp'));
+    tr.append(c1, el('td','mono',o.service), el('td','mono',o.rtt_ms + ' ms'));
+    const c4 = el('td');
+    if(o.banner) c4.append(el('div','banner', o.banner.split('\n')[0].slice(0,140)));
+    if(o.tls) c4.append(el('div','banner', `${o.tls.tls_version} ${o.tls.cipher} · expires ${o.tls.not_after}`));
+    tr.append(c4); t.append(tr);
+  });
+  p.body.append(t);
+  return p.el;
+}
+function panelHTTP(d){
+  const p = mkPanel('http');
+  for(const [scheme, res] of Object.entries(d.results || {})){
+    if(!res.reachable){ p.body.append(el('div','none', `${scheme}: unreachable — ${res.error}`)); continue; }
+    const rows = [
+      [scheme, `${res.final_status}  ${res.title || ''}`],
+      ['server', res.server || '—'],
+    ];
+    if((res.redirect_chain||[]).length > 1)
+      rows.push(['redirects', res.redirect_chain.map(c=>c.status).join(' → ')]);
+    const sec = res.security || {};
+    if((sec.missing||[]).length){
+      const w = el('div'); sec.missing.forEach(m => { w.append(el('span','pill miss', m)); w.append(document.createTextNode(' ')); });
+      rows.push(['missing', w]);
+    }
+    const leaks = Object.entries(sec.version_disclosure || {});
+    if(leaks.length){
+      const w = el('div'); leaks.forEach(([k,v]) => { w.append(el('span','pill leak', k+'='+v)); w.append(document.createTextNode(' ')); });
+      rows.push(['discloses', w]);
+    }
+    p.body.append(kvTable(rows));
+  }
+  return p.el;
+}
+
+loadScope(); loadModules(); loadHistory(); loadReports();
+</script>
+</body>
+</html>

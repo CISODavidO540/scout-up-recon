@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recon"
+version = "0.1.0"
+description = "Scope-enforced reconnaissance toolkit for authorized penetration testing engagements"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+# Everything below is optional. The tool degrades to stdlib/subprocess fallbacks without them.
+full = ["dnspython>=2.4", "requests>=2.31", "PyYAML>=6.0"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+recon = "recon.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+recon = ["data/*.txt"]

@@ -1,0 +1,16 @@
+{
+  "engagement": "Example engagement",
+  "authorized_by": "Name of the person who authorized it",
+  "authorization_ref": "Where that authorization is written down",
+  "valid_from": "2026-09-03",
+  "valid_until": "2026-12-04",
+  "in_scope": [
+    "scanme.nmap.org",
+    "192.168.56.0/24"
+  ],
+  "out_of_scope": [
+    "192.168.56.1"
+  ],
+  "max_concurrency": 20,
+  "notes": "Copy to config/scope.json and edit. scope.json is gitignored on purpose."
+}
