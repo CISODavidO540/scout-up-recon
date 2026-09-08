@@ -402,14 +402,81 @@ function render(jb){
 
   const out = $('#results'); out.innerHTML = '';
   const r = jb.results || {};
-  if(r.dns) out.append(panelDNS(r.dns));
-  if(r.whois) out.append(panelWhois(r.whois));
-  if(r.subdomains) out.append(panelSubs(r.subdomains));
-  if(r.ports) out.append(panelPorts(r.ports));
-  if(r.http) out.append(panelHTTP(r.http));
+  /* Driven by a table rather than a list of ifs: a module with no panel used to
+     run, return data, and then render nothing at all, which read as the scan
+     having skipped it. Anything unrecognised now falls back to a plain table. */
+  const PANELS = {
+    dns: panelDNS, whois: panelWhois, subdomains: panelSubs, ports: panelPorts,
+    http: panelHTTP, traceroute: panelTraceroute, tech: panelTech, robots: panelRobots,
+  };
+  for(const name of (jb.modules || Object.keys(r))){
+    if(!(name in r)) continue;
+    out.append((PANELS[name] || panelGeneric.bind(null, name))(r[name]));
+  }
   for(const [name, err] of Object.entries(jb.failed || {})){
     const p = mkPanel(name + ' — failed'); p.body.append(el('div','none', err)); out.append(p.el);
   }
+}
+
+function panelTraceroute(d){
+  const ok = d.available && !d.error;
+  const p = mkPanel('traceroute', ok ? `${d.hop_count} hops · via ${d.binary}` : '');
+  if(!d.available){ p.body.append(el('div','none', d.note || 'unavailable')); return p.el; }
+  if(d.error){ p.body.append(el('div','none', d.error)); return p.el; }
+  const hops = d.hops || [];
+  if(!hops.length){ p.body.append(el('div','none','no hops parsed')); return p.el; }
+  const t = el('table');
+  const head = el('tr'); ['hop','address','detail'].forEach(h => head.append(el('th',null,h)));
+  t.append(head);
+  hops.forEach(h => {
+    const tr = el('tr');
+    tr.append(el('td','mono', String(h.hop)));
+    tr.append(el('td','mono', h.responded ? (h.address || '') : '*'));
+    // The address already has its own column; show only what follows it.
+    const rest = h.responded && h.address
+      ? h.detail.slice(h.address.length).trim() : 'no reply';
+    tr.append(el('td','banner', rest));
+    t.append(tr);
+  });
+  p.body.append(t);
+  if(d.silent_hops) p.body.append(el('div','none', d.silent_hops + ' hop(s) did not reply'));
+  return p.el;
+}
+
+function panelTech(d){
+  const p = mkPanel('tech', d.reachable ? String(d.status) : '');
+  if(!d.reachable){ p.body.append(el('div','none','unreachable — ' + (d.error||'no response'))); return p.el; }
+  const rows = Object.entries(d.from_headers || {});
+  (d.from_body || []).forEach(sig => rows.push(['page markup', sig]));
+  if(d.generator) rows.push(['generator', d.generator]);
+  if((d.cookie_names || []).length) rows.push(['cookies', d.cookie_names.join(', ')]);
+  p.body.append(rows.length ? kvTable(rows) : el('div','none','nothing fingerprinted'));
+  return p.el;
+}
+
+function panelRobots(d){
+  const p = mkPanel('robots', d.scheme || '');
+  if(d.error){ p.body.append(el('div','none', d.error)); return p.el; }
+  const found = Object.entries(d.found || {});
+  if(!found.length) p.body.append(el('div','none','none of the standard files are published'));
+  found.forEach(([path, info]) => {
+    const rows = [[path, (info && info.status) ? String(info.status) : 'found']];
+    p.body.append(kvTable(rows));
+    ((info && info.interesting) || []).forEach(x =>
+      p.body.append(el('div','banner','flagged: ' + x)));
+  });
+  if((d.missing || []).length) p.body.append(el('div','none','absent: ' + d.missing.join(', ')));
+  return p.el;
+}
+
+/* Last resort so a new module is never invisible: show whatever it returned. */
+function panelGeneric(name, d){
+  const p = mkPanel(name);
+  const rows = Object.entries(d || {})
+    .filter(([k,v]) => v !== null && v !== '' && !(Array.isArray(v) && !v.length))
+    .map(([k,v]) => [k, (typeof v === 'object') ? JSON.stringify(v) : String(v)]);
+  p.body.append(rows.length ? kvTable(rows) : el('div','none','no output'));
+  return p.el;
 }
 
 function mkPanel(title, note){

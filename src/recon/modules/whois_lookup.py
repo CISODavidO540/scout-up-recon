@@ -35,7 +35,7 @@ def run(target, scope, opts):
     try:
         proc = subprocess.run(
             ["whois", target], capture_output=True, text=True,
-            timeout=float(opts.get("timeout", 15)),
+            timeout=float(opts.get("whois_timeout", 15)),
         )
     except (subprocess.TimeoutExpired, OSError) as exc:
         return {"target": target, "available": True, "error": str(exc)}

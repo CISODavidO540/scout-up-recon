@@ -51,7 +51,10 @@ def run(target, scope, opts):
         proc = subprocess.run(
             [binary, *base_args, max_hops, host],
             capture_output=True, text=True,
-            timeout=float(opts.get("timeout", 60)),
+            # Deliberately not "timeout": that one is the per-connection
+            # budget the ports module uses, and at its 3s default a
+            # multi-hop trace was killed before it could finish.
+            timeout=float(opts.get("traceroute_timeout", 60)),
         )
     except subprocess.TimeoutExpired:
         return {"target": target, "available": True, "error": "traceroute timed out"}
