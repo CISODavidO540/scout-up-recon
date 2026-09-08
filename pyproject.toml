@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "recon"
 version = "0.1.0"
-description = "Scope-enforced reconnaissance toolkit for authorized penetration testing engagements"
+description = "Scout Up - a reconnaissance toolkit whose authorization boundary is enforced in code"
 requires-python = ">=3.9"
 dependencies = []
 

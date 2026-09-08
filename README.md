@@ -1,7 +1,8 @@
-# recon
+# Scout Up — Recon
 
-A reconnaissance toolkit for authorized penetration testing engagements, with the
-authorization boundary built into the program rather than written in the manual.
+**Scout Up** is a reconnaissance toolkit for authorized penetration testing
+engagements, with the authorization boundary built into the program rather than
+written in the manual. The command it installs is `recon`.
 
 Most recon tools treat scope as documentation. This one treats it as code: `recon`
 will not start without a scope file naming who authorized the engagement and the
@@ -78,8 +79,8 @@ The dashboard is the same pipeline with a browser in front of it. It binds to
 Python 3.9 or newer. **No dependencies are required.**
 
 ```bash
-git clone https://github.com/CISODavidO540/recon.git
-cd recon
+git clone https://github.com/CISODavidO540/scout-up-recon.git
+cd scout-up-recon
 python3 -m pytest tests/ -q
 ```
 
