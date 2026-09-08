@@ -43,6 +43,29 @@ def _parse_entry(entry: str):
         return "host", entry
 
 
+
+def missing_scope_help(wanted=None) -> str:
+    """What to actually do about a missing scope file, on this machine.
+
+    Printing a relative path is no help to someone who installed the command
+    and is standing in their home directory, so name the real destination and
+    the example to copy from.
+    """
+    from . import paths  # imported here to keep scope.py free of import cycles
+
+    target = pathlib.Path(wanted) if wanted else paths.scope_path()
+    example = paths.example_scope()
+    lines = []
+    if example:
+        lines.append(f"Create one:  recon --init      (copies {example.name} to {target})")
+    else:
+        lines.append(f"Create {target} — see config/scope.example.json in the repository.")
+    lines.append(f"Or point at one you already have:  --scope /path/to/scope.json")
+    searched = [str(c) for c in paths.scope_candidates()]
+    if searched:
+        lines.append("Looked in: " + ", ".join(searched))
+    return "\n".join(lines)
+
 @dataclass
 class Scope:
     engagement: str
@@ -54,6 +77,7 @@ class Scope:
     max_concurrency: int = 20
     authorization_ref: str = ""
     strict_resolution: bool = False
+    app_name: str = ""
     source_path: str = ""
 
     # ---------- loading ----------
@@ -62,10 +86,7 @@ class Scope:
     def load(cls, path: str | pathlib.Path) -> "Scope":
         p = pathlib.Path(path)
         if not p.exists():
-            raise ScopeError(
-                f"scope file not found: {p}\n"
-                "Copy config/scope.example.json to config/scope.json and edit it."
-            )
+            raise ScopeError(f"scope file not found: {p}\n{missing_scope_help(p)}")
         raw = p.read_text(encoding="utf-8")
         if p.suffix in (".yaml", ".yml"):
             try:
@@ -103,6 +124,7 @@ class Scope:
             out_of_scope=[_parse_entry(e) for e in data.get("out_of_scope", [])],
             max_concurrency=int(data.get("max_concurrency", 20)),
             strict_resolution=bool(data.get("strict_resolution", False)),
+            app_name=str(data.get("app_name", "")),
             source_path=str(p),
         )
 

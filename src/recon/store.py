@@ -15,7 +15,8 @@ import pathlib
 import re
 import uuid
 
-HISTORY_DIR = pathlib.Path("out/scans")
+from . import paths
+
 MAX_HISTORY = 50
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -25,9 +26,9 @@ def new_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
-def save(record, directory=HISTORY_DIR) -> pathlib.Path:
+def save(record, directory=None) -> pathlib.Path:
     """Write one finished scan and prune anything past MAX_HISTORY."""
-    d = pathlib.Path(directory)
+    d = pathlib.Path(directory) if directory else paths.history_dir()
     d.mkdir(parents=True, exist_ok=True)
     path = d / f"{record['id']}.json"
     path.write_text(json.dumps(record, indent=2, default=str), encoding="utf-8")
@@ -37,7 +38,7 @@ def save(record, directory=HISTORY_DIR) -> pathlib.Path:
     return path
 
 
-def load(scan_id, directory=HISTORY_DIR):
+def load(scan_id, directory=None):
     """Return one saved record, or None.
 
     A unique id prefix is enough, so you can type the first few characters the
@@ -45,7 +46,7 @@ def load(scan_id, directory=HISTORY_DIR):
     """
     if not scan_id or not _ID.match(str(scan_id)):
         return None
-    d = pathlib.Path(directory)
+    d = pathlib.Path(directory) if directory else paths.history_dir()
     p = d / f"{scan_id}.json"
     if not p.exists():
         matches = sorted(d.glob(f"{scan_id}*.json")) if d.exists() else []
@@ -58,9 +59,9 @@ def load(scan_id, directory=HISTORY_DIR):
         return None
 
 
-def recent(limit=25, directory=HISTORY_DIR):
+def recent(limit=25, directory=None):
     """Summaries of saved scans, newest first."""
-    d = pathlib.Path(directory)
+    d = pathlib.Path(directory) if directory else paths.history_dir()
     if not d.exists():
         return []
     out = []

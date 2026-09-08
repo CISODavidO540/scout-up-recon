@@ -84,7 +84,7 @@ cd scout-up-recon
 python3 -m pytest tests/ -q
 ```
 
-That last command should print `32 passed`. If it does, you are installed.
+That last command should print `42 passed`. If it does, you are installed.
 
 The tool runs from source with no build step:
 
@@ -92,11 +92,21 @@ The tool runs from source with no build step:
 PYTHONPATH=src python3 -m recon --list-modules
 ```
 
-To install it as a `recon` command instead:
+To install it as a `recon` command available from anywhere:
 
 ```bash
-pip install -e .
+pip install .
 ```
+
+Then set up your engagement file. This works from any directory:
+
+```bash
+recon --init
+```
+
+It writes a starter scope file to the right place for your platform and tells
+you where that is. Edit it before you scan anything — that file decides what
+you are allowed to touch.
 
 ### Optional extras
 
@@ -117,7 +127,13 @@ installing packages, and a recon tool that cannot run there is not useful.
 
 ## Step-by-Step Instructions
 
-**1. Write a scope file.** Copy the example and edit it:
+**1. Write a scope file.** Generate one and edit it:
+
+```bash
+recon --init
+```
+
+From a checkout you can copy the example directly instead:
 
 ```bash
 cp config/scope.example.json config/scope.json
@@ -168,10 +184,11 @@ Then open <http://127.0.0.1:8787>.
 | `-m dns,ports,http` | Pick modules; `-m all` runs everything |
 | `-p top` / `-p 1-1024` / `-p 22,80,443` | Ports for the `ports` module |
 | `--check` | Run the scope check and exit without scanning |
-| `-r, --report [PATH]` | Write a Markdown findings report; bare flag writes into `reports/` |
+| `-r, --report [PATH]` | Write a Markdown findings report; bare flag writes into the reports directory |
 | `-o, --out PATH` | Write raw JSON results |
 | `--results` | List saved scans |
 | `--show ID` | Reprint a saved scan; add `--report` to write it up later |
+| `--init` | Write a starter scope file to the default location and exit |
 | `--serve` | Start the local dashboard |
 | `--no-banners` | Skip banner grabbing |
 
@@ -197,6 +214,35 @@ permission. The design assumes both.
   DNS rebinding from moving a scan off-scope mid-run.
 - The engagement window is enforced on every run, so authorization expires on its
   own rather than depending on you to remember.
+
+### Where your files are kept
+
+Nothing is written to a shared or system-wide location. Paths resolve in this
+order, and the first match wins:
+
+| | Scope file | Scan history and reports |
+|---|---|---|
+| Explicit | `--scope PATH`, or `RECON_SCOPE` | `RECON_HOME` |
+| Inside a checkout | `<checkout>/config/scope.json` | `<checkout>/out/`, `<checkout>/reports/` |
+| Installed copy | `~/.config/scout-up/scope.json` | `~/.local/share/scout-up/` |
+
+On Windows both fall under `%LOCALAPPDATA%\scout-up`. A checkout is detected by
+walking up from the current directory, so the repository workflow keeps working
+from any subdirectory of it, and an installed copy run from your home directory
+no longer reports the scope file missing.
+
+### Naming your own deployment
+
+The name in the dashboard header is not hardcoded. Set `app_name` in your scope
+file, or `RECON_APP_NAME` in the environment, and that name is what the page and
+the browser tab show:
+
+```bash
+RECON_APP_NAME="Night Owl" recon --serve
+```
+
+Useful if you fork this or run it inside a team that would rather see its own
+name on the console.
 
 ### The dashboard is loopback-only
 
@@ -275,11 +321,12 @@ src/recon/
   webapp.py      loopback-only dashboard
   report.py      findings derivation and Markdown reports
   store.py       shared scan history for CLI and dashboard
+  paths.py       where the scope file, history and reports live per platform
   output.py      terminal rendering
   modules/       the eight recon modules
 config/          scope.example.json (tracked), scope.json (never tracked)
 docs/            white hat agreement
-tests/           32 tests, mostly covering scope enforcement
+tests/           42 tests, mostly covering scope enforcement and path resolution
 ```
 
 ## Testing

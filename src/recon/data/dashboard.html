@@ -191,7 +191,7 @@ td.k{color:var(--muted);white-space:nowrap;width:1%}
 <body>
 
 <header class="top">
-  <div class="brand">scout<span>up</span></div>
+  <div class="brand" id="brand">scout<span>up</span></div>
   <div class="ver mono" id="ver">recon console</div>
   <div class="grow"></div>
   <div class="ver">loopback only · 127.0.0.1</div>
@@ -256,6 +256,7 @@ async function loadScope(){
     $('#run').disabled = true;
     return;
   }
+  applyName(s.app_name);
   box.append(
     pill(s.window_open ? 'open' : 'closed', s.window_open ? 'authorized' : 'window closed'),
     field('engagement', s.engagement),
@@ -265,6 +266,22 @@ async function loadScope(){
   );
   if(s.out_of_scope.length) box.append(field('excluded', s.out_of_scope.join(', ')));
   $('#run').disabled = !s.window_open;
+}
+/* The name on the page comes from the server, not from this file, so a fork or
+   an internal deployment can set RECON_APP_NAME or app_name in its scope file
+   and have its own name here without editing the markup. Two words render as
+   two-tone the way "scout up" does; anything else is left alone. */
+function applyName(name){
+  if(!name) return;
+  document.title = name;
+  const b = $('#brand'); b.textContent = '';
+  const parts = String(name).trim().split(/\s+/);
+  if(parts.length === 2){
+    b.append(document.createTextNode(parts[0].toLowerCase()),
+             el('span', null, parts[1].toLowerCase()));
+  } else {
+    b.textContent = name.toLowerCase();
+  }
 }
 function pill(kind, text){ const p = el('span','state '+kind, text); return p; }
 function field(k,v){

@@ -18,12 +18,11 @@ import urllib.parse
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, output, report, store
+from . import __version__, output, paths, report, store
 from .modules import DEFAULT_ORDER, REGISTRY
 from .scope import OutOfScope, Scope, ScopeError
 
 STATIC = pathlib.Path(__file__).parent / "data"
-REPORT_DIR = pathlib.Path("reports")
 
 _lock = threading.Lock()
 _jobs: dict = {}
@@ -46,6 +45,7 @@ def _scope_payload(scope):
         "strict_resolution": scope.strict_resolution,
         "max_concurrency": scope.max_concurrency,
         "source_path": scope.source_path,
+        "app_name": paths.app_name(scope),
     }
 
 
@@ -105,10 +105,11 @@ def _run_job(job_id, scope_path, target, modules, opts):
 
 
 def _reports():
-    if not REPORT_DIR.exists():
+    rdir = paths.report_dir()
+    if not rdir.exists():
         return []
     out = []
-    for p in sorted(REPORT_DIR.glob("*.md"),
+    for p in sorted(rdir.glob("*.md"),
                     key=lambda p: p.stat().st_mtime, reverse=True)[:25]:
         out.append({"file": p.name, "bytes": p.stat().st_size,
                     "modified": _dt.datetime.fromtimestamp(
@@ -176,7 +177,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/report/"):
             # Serve a previously written report back for preview.
             name = pathlib.Path(urllib.parse.unquote(path.rsplit("/", 1)[-1])).name
-            f = REPORT_DIR / name
+            f = paths.report_dir() / name
             if not f.exists() or f.suffix != ".md":
                 return self._send(404, {"error": "no such report"})
             return self._send(200, f.read_text(encoding="utf-8"),
@@ -211,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "that scan produced no results to report on"})
             record.setdefault("id", job_id)
             try:
-                out = report.write(record, REPORT_DIR)
+                out = report.write(record)
             except OSError as exc:
                 return self._send(500, {"error": f"could not write report: {exc}"})
             return self._send(201, {"file": out.name, "path": str(out),
@@ -246,7 +247,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(202, {"id": job_id})
 
 
-def serve(scope_path="config/scope.json", port=8787):
+def serve(scope_path=None, port=8787):
+    scope_path = scope_path or paths.scope_path()
     Handler.scope_path = scope_path
     try:
         Scope.load(scope_path)
@@ -254,10 +256,17 @@ def serve(scope_path="config/scope.json", port=8787):
         print(f"scope error: {exc}")
         return 2
 
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"recon dashboard  ->  http://127.0.0.1:{port}")
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    except OSError as exc:
+        # 8787 is not a rare port. On someone else's machine this is the most
+        # likely first failure, and a traceback does not tell them what to do.
+        print(f"cannot listen on 127.0.0.1:{port}: {exc}")
+        print(f"Something else is using it. Pick another:  recon --serve --port {port + 1}")
+        return 2
+    print(f"{paths.app_name(Scope.load(scope_path))} dashboard  ->  http://127.0.0.1:{port}")
     print(f"scope file       ->  {scope_path}")
-    print(f"reports          ->  {REPORT_DIR.resolve()}")
+    print(f"reports          ->  {paths.report_dir()}")
     print("bound to loopback only; Ctrl-C to stop\n")
     try:
         httpd.serve_forever()

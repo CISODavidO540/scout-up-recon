@@ -14,6 +14,8 @@ import datetime as _dt
 import pathlib
 import re
 
+from . import paths
+
 SEVERITY_ORDER = {"medium": 0, "low": 1, "informational": 2}
 
 # Services that are worth a second look when they answer from outside.
@@ -279,8 +281,8 @@ def build(record) -> str:
     return "\n".join(md)
 
 
-def write(record, directory="reports") -> pathlib.Path:
-    d = pathlib.Path(directory)
+def write(record, directory=None) -> pathlib.Path:
+    d = pathlib.Path(directory) if directory else paths.report_dir()
     d.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", str(record.get("target", "target")))
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")

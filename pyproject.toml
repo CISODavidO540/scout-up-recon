@@ -21,4 +21,4 @@ recon = "recon.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-recon = ["data/*.txt"]
+recon = ["data/*"]

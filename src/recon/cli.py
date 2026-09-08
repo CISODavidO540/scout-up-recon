@@ -8,14 +8,17 @@ the program starts.
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
+import json
 import pathlib
 import sys
 
-from . import __version__, output, report, store
+from . import __version__, output, paths, report, store
 from .modules import DEFAULT_ORDER, REGISTRY
 from .scope import OutOfScope, Scope, ScopeError
 
-DEFAULT_SCOPE = "config/scope.json"
+#: Resolved per run, not at import: where the scope file lives depends on
+#: whether you are standing in a checkout or running an installed copy.
 
 
 def build_parser():
@@ -28,8 +31,11 @@ def build_parser():
         ),
     )
     p.add_argument("target", nargs="?", help="domain or IP to enumerate")
-    p.add_argument("-s", "--scope", default=DEFAULT_SCOPE,
-                   help=f"scope file (default: {DEFAULT_SCOPE})")
+    p.add_argument("--init", action="store_true",
+                   help="write a starter scope file to the default location and exit")
+    p.add_argument("-s", "--scope", default=None,
+                   help="scope file (default: the first of $RECON_SCOPE, "
+                        "<checkout>/config/scope.json, or the per-user config dir)")
     p.add_argument("-m", "--modules", default="dns,whois,http",
                    help="comma-separated modules, or 'all' (default: dns,whois,http)")
     p.add_argument("-p", "--ports", default="top",
@@ -92,8 +98,43 @@ def _write_report(args, record):
     print(output.dim(f"report: {p}  ({len(findings)} finding(s))"))
 
 
+def _init_scope(dest=None):
+    """Put a starter scope file where this machine expects to find it.
+
+    Telling someone to `cp` a file out of a site-packages directory they have
+    to locate first is a bad first five minutes. This does it for them, and
+    refuses to overwrite an existing engagement.
+    """
+    target = pathlib.Path(dest) if dest else paths.scope_path()
+    if target.exists():
+        print(output.yellow(f"scope file already exists: {target}"), file=sys.stderr)
+        print("Edit it, or pass --scope to use a different one.", file=sys.stderr)
+        return 2
+    example = paths.example_scope()
+    if example is None:
+        print("cannot find the packaged scope.example.json", file=sys.stderr)
+        return 2
+    data = json.loads(example.read_text(encoding="utf-8"))
+    # The example ships fixed dates so it reads clearly, but a file generated
+    # today should open today — otherwise a new user's first run is refused by
+    # an engagement window that expired before they installed anything.
+    today = _dt.date.today()
+    data["valid_from"] = today.isoformat()
+    data["valid_until"] = (today + _dt.timedelta(days=90)).isoformat()
+    data["notes"] = ("Edit in_scope before scanning. Never commit this file: it names "
+                     "real targets and who authorized them.")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {target}")
+    print("Edit it before scanning: it decides what you are allowed to touch.")
+    return 0
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
+
+    if args.init:
+        return _init_scope(args.scope)
 
     if args.serve:
         from .webapp import serve
@@ -146,7 +187,7 @@ def main(argv=None):
         return 2
 
     try:
-        scope = Scope.load(args.scope)
+        scope = Scope.load(args.scope or paths.scope_path())
     except ScopeError as exc:
         print(f"scope error: {exc}", file=sys.stderr)
         return 2

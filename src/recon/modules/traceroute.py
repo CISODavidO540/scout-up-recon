@@ -21,6 +21,8 @@ def _pick_binary():
     for name, args in (
         ("traceroute", ["-n", "-q", "1", "-w", "2", "-m"]),
         ("tracepath", ["-n", "-m"]),
+        # Windows ships its own, with the hop limit spelled differently.
+        ("tracert", ["-d", "-w", "2000", "-h"]),
     ):
         path = shutil.which(name)
         if path:
