@@ -329,7 +329,12 @@ function watch(id){
     }
   }, 700);
 }
-async function show(id){ currentJob = id; const jb = await j('/api/job/'+id); jb.id = jb.id || id; render(jb); }
+async function show(id){
+  currentJob = id;
+  const jb = await j('/api/job/'+id); jb.id = jb.id || id;
+  render(jb);
+  history.replaceState(null, '', '?scan=' + encodeURIComponent(id));
+}
 
 let currentJob = null;
 
@@ -477,6 +482,11 @@ function panelHTTP(d){
 }
 
 loadScope(); loadModules(); loadHistory(); loadReports();
+
+/* A saved scan can be linked directly as ?scan=<id>, so a result can be
+   bookmarked or handed to someone else without re-running it. */
+const linked = new URLSearchParams(location.search).get('scan');
+if(linked) show(linked);
 </script>
 </body>
 </html>
