@@ -84,7 +84,7 @@ cd scout-up-recon
 python3 -m pytest tests/ -q
 ```
 
-That last command should print `42 passed`. If it does, you are installed.
+That last command should print `49 passed`. If it does, you are installed.
 
 The tool runs from source with no build step:
 
@@ -326,7 +326,7 @@ src/recon/
   modules/       the eight recon modules
 config/          scope.example.json (tracked), scope.json (never tracked)
 docs/            white hat agreement
-tests/           42 tests, mostly covering scope enforcement and path resolution
+tests/           49 tests, covering scope enforcement, path resolution and hop parsing
 ```
 
 ## Testing

@@ -131,12 +131,78 @@ def render_http(data):
     return lines
 
 
+def render_traceroute(data):
+    lines = [rule(f"TRACEROUTE  {data['target']}")]
+    if not data.get("available"):
+        return lines + [yellow(f"   {data.get('note', 'unavailable')}")]
+    if data.get("error"):
+        return lines + [red(f"   {data['error']}")]
+    hops = data.get("hops", [])
+    if not hops:
+        return lines + [yellow("   no hops parsed")]
+    lines.append(dim(f"   via {data['binary']} to {data['scanned_host']}"))
+    for hop in hops:
+        n = f"{hop['hop']:>3}"
+        if hop["responded"]:
+            lines.append(f"   {n}  {hop['detail']}")
+        else:
+            lines.append(dim(f"   {n}  *"))
+    silent = data.get("silent_hops", 0)
+    tail = f"   {len(hops)} hops"
+    if silent:
+        tail += f", {silent} silent"
+    lines.append(dim(tail))
+    return lines
+
+
+def render_tech(data):
+    lines = [rule(f"TECH  {data['target']}")]
+    if not data.get("reachable"):
+        return lines + [yellow(f"   unreachable — {data.get('error', 'no response')}")]
+    lines.append(dim(f"   {data['status']}  {data['url']}"))
+    for label, value in (data.get("from_headers") or {}).items():
+        lines.append(f"   {label:<20} {value}")
+    for sig in data.get("from_body") or []:
+        lines.append(f"   {'page markup':<20} {sig}")
+    if data.get("generator"):
+        lines.append(f"   {'generator':<20} {data['generator']}")
+    if data.get("cookie_names"):
+        lines.append(dim(f"   cookies: {', '.join(data['cookie_names'])}"))
+    if not any((data.get("from_headers"), data.get("from_body"),
+                data.get("generator"), data.get("cookie_names"))):
+        lines.append(yellow("   nothing fingerprinted"))
+    return lines
+
+
+def render_robots(data):
+    lines = [rule(f"ROBOTS  {data['target']}")]
+    if data.get("error"):
+        return lines + [red(f"   {data['error']}")]
+    found = data.get("found") or {}
+    if not found:
+        lines.append(yellow("   none of the standard files are published"))
+    for path, info in found.items():
+        detail = info if isinstance(info, str) else ""
+        lines.append(f"   {green('found'):<16} {path}")
+        for entry in (info.get("interesting", []) if isinstance(info, dict) else []):
+            lines.append(yellow(f"       flagged: {entry}"))
+        if detail:
+            lines.append(dim(f"       {detail[:120]}"))
+    missing = data.get("missing") or []
+    if missing:
+        lines.append(dim(f"   absent: {', '.join(missing)}"))
+    return lines
+
+
 RENDERERS = {
     "dns": render_dns,
     "whois": render_whois,
     "subdomains": render_subdomains,
     "ports": render_ports,
     "http": render_http,
+    "traceroute": render_traceroute,
+    "tech": render_tech,
+    "robots": render_robots,
 }
 
 
